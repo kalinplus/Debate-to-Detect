@@ -1,6 +1,10 @@
 from typing import Dict, List, Tuple, Literal
 from dataclasses import dataclass
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # 0) RoleConfig dataclass (original role_config.py content)
@@ -26,7 +30,9 @@ SUPPORT_MODELS: List[str] = [
     "gpt-4",
     "gpt-4-0314",
     "gpt-3.5-turbo",
-    "gpt-3.5-turbo-0301"
+    "gpt-3.5-turbo-0301",
+    "gpt-5-nano",
+    "gpt-5.1"
 ]
 
 # Token and memory management configuration

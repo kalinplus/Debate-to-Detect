@@ -1,0 +1,5 @@
+openai==0.28.1
+tiktoken
+requests
+backoff
+python-dotenv

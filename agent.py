@@ -51,7 +51,14 @@ class Agent:
         time.sleep(self.sleep_time)
         self._validate_model()
         limited_tokens = self._limit_tokens(max_tokens)
-        return self._make_openai_request(messages, limited_tokens, temperature)
+        print(f"[DEBUG] {self.name}: Calling OpenAI API (model={self.model_name}, base={openai.api_base})...")
+        try:
+            result = self._make_openai_request(messages, limited_tokens, temperature)
+            print(f"[DEBUG] {self.name}: API call successful")
+            return result
+        except Exception as e:
+            print(f"[ERROR] {self.name}: API call failed - {type(e).__name__}: {e}")
+            raise
 
     # Set system prompt
     def set_meta_prompt(self, prompt: str):

@@ -13,7 +13,7 @@ from agent import build_agent, Agent
 from evidence_system import EvidenceSystem
 
 class Debate:
-    def __init__(self, *, model_name="gpt-4o", T=1, sleep=1):
+    def __init__(self, *, model_name="gpt-4o-mini", T=1, sleep=1):
         self.model_name, self.T, self.sleep = model_name, T, sleep
         self.shared: List[Dict] = []       # Complete context for LLM
         self.transcript: List[Dict] = []   # Concise dialogue for saving
@@ -39,12 +39,14 @@ class Debate:
         profiles = {}
         for role_name, agent in self.agents.items():
             if not role_name.startswith("Judge"):  # Only generate profiles for debate roles
+                print(f"[DEBUG] Generating profile for {role_name}...")
                 prompt = (
                     f"The news domain is '{domain}'. "
                     f"Provide a brief professional profile (1 sentence) for a '{role_name}' "
                     f"role relevant to this domain."
                 )
                 profiles[role_name] = agent.ask([], prompt, temperature=1).strip()
+                print(f"[DEBUG] Profile generated for {role_name}")
         return profiles
 
     def _create_role_configs(self) -> List[RoleConfig]:
@@ -154,8 +156,13 @@ class Debate:
 
     def _setup_domain_context(self, news_text: str):
         """Set up domain context and role profiles"""
+        print("[DEBUG] Detecting domain...")
         self.domain = self._detect_domain(news_text)
+        print(f"[DEBUG] Domain detected: {self.domain}")
+
+        print("[DEBUG] Generating profiles for all debate agents...")
         self.profiles = self._generate_profiles(self.domain)
+        print(f"[DEBUG] Generated {len(self.profiles)} profiles")
         
         # Add profiles to each role's system_prompt
         for role_name, agent in self.agents.items():
@@ -280,6 +287,7 @@ class Debate:
         assert news_text, "news_text cannot be empty"
         self.news_stem = news_path.stem
 
+        print("[INFO] try to set domain context...")
         # Set up domain context
         self._setup_domain_context(news_text)
         print(f"\n=== Debate-to-Detect: Truth/Fake News Analysis | Domain: {self.domain} ===")
