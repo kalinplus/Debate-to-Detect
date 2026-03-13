@@ -24,6 +24,7 @@ class Debate:
         self.evidence_data: Optional[Dict] = None  # Store all evidence data
         self.affirmative_evidence: Optional[Dict] = None  # Available evidence for affirmative
         self.negative_evidence: Optional[Dict] = None     # Available evidence for negative
+        self.news_stem: str = ""       # Default stem for output filename
 
     def _detect_domain(self, news_text: str) -> str:
         """Detect the domain of the news"""
@@ -87,9 +88,9 @@ class Debate:
     def _create_debate_configs(self, side: str, duties: List[str]) -> List[RoleConfig]:
         """Create debate role configurations"""
         stance = (
-            "You believe the news is true and need to argue in its favor."
+            "You believe the text is AI-generated and need to argue in its favor."
             if side == "Affirmative"
-            else "You believe the news is false and need to argue against it."
+            else "You believe the text is human-written and need to argue against it."
         )
         return [
             RoleConfig(
@@ -114,8 +115,8 @@ class Debate:
     def _get_fixed_stance(self, speaker: str) -> str:
         """Return fixed stance reminder based on speaker identity"""
         stance_map = {
-            "Affirmative": "**Your fixed stance is that the news is true.**",
-            "Negative": "**Your fixed stance is that the news is false.**"
+            "Affirmative": "**Your fixed stance is that the text is AI-generated.**",
+            "Negative": "**Your fixed stance is that the text is human-written.**"
         }
         return stance_map.get(speaker.split('_')[0], "")
 
@@ -282,15 +283,19 @@ class Debate:
         
         return f"{stance_reminder}\n\n{base_prompt}" if stance_reminder else base_prompt
 
-    def run(self, *, news_text: str, news_path: Path):
-        """Run complete debate process"""
+    # def run(self, *, news_text: str, output_path: Path = None):
+    def run(self, news_text: str, output_path: Path = None):
+        """Run complete debate process and return results"""
         assert news_text, "news_text cannot be empty"
-        self.news_stem = news_path.stem
+        if output_path:
+            self.news_stem = output_path.stem
+        else:
+            print("[WARNING] no output_path !!!")
 
         print("[INFO] try to set domain context...")
         # Set up domain context
         self._setup_domain_context(news_text)
-        print(f"\n=== Debate-to-Detect: Truth/Fake News Analysis | Domain: {self.domain} ===")
+        print(f"\n=== Debate-to-Detect: AI/Human Text Analysis | Domain: {self.domain} ===")
 
         # If presenting evidence in opening phase
         if EVIDENCE_PHASE == "Opening" and ENABLE_EVIDENCE:
@@ -298,30 +303,46 @@ class Debate:
 
         # Execute debate phases
         self._run_debate_phases(news_text)
-        
+
         # Judging phase
-        self._judge(news_text)
+        result = self._judge(news_text)
+
+        # Return results
+        return result
 
     def _judge(self, news_text: str):
         """Execute evaluation and verdict"""
         print(f"\n--- Scoring Phase ---")
-        
+
         # First calculate scores for five dimensions
         scores = self._calculate_scores(news_text)
-        
+
         # Determine final verdict
         verdict = self._determine_verdict(scores)
-        
+
+        # Calculate detection score
+        detection_score = self._get_detection_score(scores, verdict)
+
         print(f"\n--- Summary Phase ---")
-        
+
         # Then generate summary (including verdict and explanation)
         summary = self._get_debate_summary_with_verdict(news_text, scores, verdict)
-        
+
         print(f"\n[Total] A={scores['Affirmative']}  N={scores['Negative']}")
         print("Verdict:", verdict)
+        print("Detection Score:", detection_score)
 
         if AUTO_SAVE:
             self._save(news_text, summary, scores, verdict)
+
+        # Return results as dictionary
+        return {
+            "verdict": verdict,
+            "detection_score": detection_score,
+            "scores": scores,
+            "summary": summary,
+            "domain": self.domain
+        }
 
     def _calculate_scores(self, news_text: str) -> Dict[str, int]:
         """Calculate scores for each side - only use scoring judges"""
@@ -333,14 +354,14 @@ class Debate:
             evidence_context = f"\n\nEvidence from Wikipedia:\n{self.evidence_system.format_evidence_for_debate(self.evidence_data)}"
         
         judge_prompt_template = (
-            f"The original news article is:\n{news_text}\n"
+            f"The text to analyze is:\n{news_text}\n"
             f"Debate content:\n{self._get_debate_content()}\n"
             f"{evidence_context}\n"
-            "Your task is to assess the factual authenticity of the original news.\n"
-            "Affirmatives defend the news as factual.\n"
-            "Negatives argue that the news is misleading.\n"
-            "Base your judgment on the news content, the debate arguments, and the external evidence provided.\n"
-            "Assign an integer score to each side based on how convincingly they support their position relative to the truth.\n"
+            "Your task is to assess whether the text is AI-generated or human-written.\n"
+            "Affirmatives argue the text is AI-generated.\n"
+            "Negatives argue the text is human-written.\n"
+            "Base your judgment on the text content, the debate arguments, and the writing patterns presented.\n"
+            "Assign an integer score to each side based on how convincingly they support their position.\n"
             "The two scores must add up to exactly 7.\n"
             "Return ONLY the following JSON format and nothing else:\n"
             '{"Affirmative": X, "Negative": Y}'
@@ -389,11 +410,27 @@ class Debate:
     def _determine_verdict(self, scores: Dict[str, int]) -> str:
         """Determine final verdict"""
         if scores["Affirmative"] > scores["Negative"]:
-            return "REAL"
+            return "AI_GENERATED"
         elif scores["Negative"] > scores["Affirmative"]:
-            return "FAKE"
+            return "HUMAN_WRITTEN"
         else:
             return "UNCERTAIN"
+
+    def _get_detection_score(self, scores: Dict[str, int], verdict: str) -> float:
+        """
+        Calculate detection score (0-1) for metrics calculation
+        Higher score indicates more likely AI-generated
+        """
+        total = scores.get("Affirmative", 0) + scores.get("Negative", 0)
+        if total > 0:
+            return scores.get("Affirmative", 0) / total
+
+        # Fallback based on verdict
+        if verdict == "AI_GENERATED":
+            return 1.0
+        elif verdict == "HUMAN_WRITTEN":
+            return 0.0
+        return 0.5
 
     def _save(self, news_text: str, summary: str, scores: Dict[str, int], verdict: str):
         """Save debate results"""

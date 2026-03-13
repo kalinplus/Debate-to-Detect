@@ -32,7 +32,8 @@ SUPPORT_MODELS: List[str] = [
     "gpt-3.5-turbo",
     "gpt-3.5-turbo-0301",
     "gpt-5-nano",
-    "gpt-5.1"
+    "gpt-5.1",
+    "gpt-5-codex"
 ]
 
 # Token and memory management configuration
@@ -47,7 +48,7 @@ DETECTION_TASK: bool = True    # Whether to execute "fake news detection" task
 FREE_ROUNDS: int = 1          # Free debate rounds (each round includes one speech from A_Free + N_Free)
 
 # ---- Evidence system configuration ----
-ENABLE_EVIDENCE: bool = True   # Whether to enable evidence system
+ENABLE_EVIDENCE: bool = False   # Wikipedia evidence not applicable for AI text detection
 EVIDENCE_PHASE: str = "Free"   # In which phase to present evidence ("Free", "Rebuttal", "Opening")
 
 # ---- Role table -------------------------------------------------------------
@@ -55,25 +56,24 @@ DEBATE_ROLES = ["Opening", "Rebuttal", "Free", "Closing"]
 
 # Keep only scoring judges, summary judge handled separately
 SCORING_JUDGE_ROLES = [
-    ("Accuracy", "evaluate **factual accuracy**"),
-    ("SourceReliability", "evaluate **source reliability**"),
-    ("Reasoning", "evaluate **reasoning and internal consistency**"),
-    ("Clarity", "evaluate **clarity and neutrality of language**"),
-    ("Ethics", "evaluate **ethical responsibility and potential harm**"),
+    ("Logic", "evaluate **logical reasoning and argument quality**"),
+    ("Evidence", "evaluate **use of supporting evidence and examples**"),
+    ("Coherence", "evaluate **internal consistency and flow**"),
+    ("Style", "evaluate **writing style and linguistic patterns**"),
+    ("Depth", "evaluate **depth of analysis and critical thinking**"),
 ]
 
 # Summary judge defined separately
 SUMMARY_JUDGE_CONFIG = (
-    "Summary", 
-    """summarize the entire debate in a structured, concise, and objective manner: 
+    "Summary",
+    """summarize the entire debate in a structured, concise, and objective manner:
     "Please use the following format:\n\n"
     "**Summary**\n"
-    1. **Main Event**: [Briefly describe the news being debated]
-    2. **Affirmative Position**: [Key arguments supporting the news as true]
-    3. **Negative Position**: [Key arguments claiming the news is false]
-    4. **Evidence Presented**: [Summary of any external evidence mentioned]
-    5. **Key Points of Contention**: [Main areas of disagreement]
-    6. **Conclusion**: [State the verdict and explain the reasoning based on the debate arguments, evidence, and scoring results]  
+    1. **Main Event**: [Briefly describe the text being analyzed]
+    2. **Affirmative Position**: [Key arguments suggesting the text is AI-generated]
+    3. **Negative Position**: [Key arguments suggesting the text is human-written]
+    4. **Key Points of Contention**: [Main areas of disagreement]
+    5. **Conclusion**: [State the verdict and explain the reasoning based on the debate arguments and scoring results]
     Keep each section Concise and Comprehensive."""
 )
 
@@ -86,7 +86,7 @@ ROLES: Dict[str, List[str] | List[Tuple[str, str]]] = {
 # ---- Process templates -----------------------------------------------------------
 PHASE_TEMPLATES = {
     "Opening": (
-        "The news is:\n\"\"\"{news}\"\"\"\n"
+        "The text is:\n\"\"\"{news}\"\"\"\n"
         "Give your opening statement defending your fixed stance. Concise and Comprehensive"
     ),
     "Rebuttal": "Please rebut your opponent's opening statement above. Concise and Comprehensive",
@@ -113,11 +113,11 @@ PHASES = [
 
 # ---- Scoring dimensions -----------------------------------------------------------
 DIMENSIONS = {
-    "Accuracy": "factual accuracy",
-    "SourceReliability": "source reliability",
-    "Reasoning": "reasoning consistency",
-    "Clarity": "clarity and neutrality of language",
-    "Ethics": "ethical responsibility and potential harm",
+    "Logic": "logical reasoning quality",
+    "Evidence": "use of supporting evidence",
+    "Coherence": "internal consistency and flow",
+    "Style": "writing style and patterns",
+    "Depth": "depth of analysis",
 }
 
 # ---------------------------------------------------------------------------

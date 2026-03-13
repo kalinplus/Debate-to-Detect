@@ -4,16 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Debate-to-Detect (D2D)** is a multi-agent debate framework for fake news detection. The system simulates a structured debate between AI agents arguing that news is true (Affirmative) versus false (Negative), with Judge agents evaluating the debate to deliver a verdict.
+**Debate-to-Detect (D2D)** is a multi-agent debate framework for AI text detection. The system simulates a structured debate between AI agents arguing that text is AI-generated (Affirmative) versus human-written (Negative), with Judge agents evaluating the debate to deliver a verdict.
 
-**Core Philosophy**: Truth becomes clearer through adversarial debate and evidence evaluation.
+**Core Philosophy**: Text authorship becomes clearer through adversarial debate and pattern analysis.
 
 **Key Features**:
 - Multi-agent debate system with fixed stances (Affirmative/Negative)
-- Evidence retrieval from Wikipedia with automatic stance classification
 - Domain-aware role profiles for each agent
-- Multi-dimensional scoring (Accuracy, SourceReliability, Reasoning, Clarity, Ethics)
+- Multi-dimensional scoring (Logic, Evidence, Coherence, Style, Depth)
 - Configurable debate phases (Opening, Rebuttal, Free, Closing)
+- No external evidence system needed (focuses on text patterns)
 
 ## Setup and Running
 
@@ -63,10 +63,10 @@ from engine import Debate
 # Initialize with model, temperature, and delay between API calls
 debate = Debate(model_name="gpt-4o", T=1, sleep=1)
 
-# Run debate on news text
-news_text = "Apple will release a new quantum computer next year."
-news_path = Path("sample_news.txt")
-debate.run(news_text=news_text, news_path=news_path)
+# Run debate on text to analyze
+text_to_analyze = "The quantum entanglement principle demonstrates that particles can exhibit correlations that cannot be explained by classical physics."
+text_path = Path("sample_text.txt")
+debate.run(news_text=text_to_analyze, news_path=text_path)
 ```
 
 **Parameters**:
@@ -76,20 +76,19 @@ debate.run(news_text=news_text, news_path=news_path)
 
 ### Output
 Results are automatically saved to `Results/` directory as JSON (default) or text format. Output includes:
-- Verdict (REAL/FAKE/UNCERTAIN)
+- Verdict (AI_GENERATED/HUMAN_WRITTEN/UNCERTAIN)
 - Score distribution (Affirmative vs Negative)
-- Debate summary with evidence references
+- Debate summary with analysis
 - Full transcript of all speeches
 
 ## Architecture
 
 ### System Flow
-1. **Domain Detection**: News domain is classified (e.g., "technology", "politics")
+1. **Domain Detection**: Text domain is classified (e.g., "technology", "politics")
 2. **Profile Generation**: Each agent gets a domain-specific professional profile
-3. **Evidence Gathering** (optional): Keywords extracted → Wikipedia search → stance classification
-4. **Debate Phases**: Opening → Rebuttal → Free rounds → Closing
-5. **Scoring**: Five dimension-specific judges score each side (0-7, must sum to 7 per judge)
-6. **Verdict**: Summary judge generates final conclusion based on scores
+3. **Debate Phases**: Opening → Rebuttal → Free rounds → Closing
+4. **Scoring**: Five dimension-specific judges score each side (0-7, must sum to 7 per judge)
+5. **Verdict**: Summary judge generates final conclusion based on scores
 
 ### Key Components
 
@@ -120,17 +119,17 @@ Results are automatically saved to `Results/` directory as JSON (default) or tex
 
 **Debate Agents** (8 total):
 - Affirmative/Negative: Opening, Rebuttal, Free, Closing
-- Fixed stances: Affirmative always argues true, Negative always argues false
+- Fixed stances: Affirmative always argues text is AI-generated, Negative always argues text is human-written
 
 **Judge Agents** (6 total):
-- 5 Scoring Judges: Accuracy, SourceReliability, Reasoning, Clarity, Ethics
+- 5 Scoring Judges: Logic, Evidence, Coherence, Style, Depth
 - 1 Summary Judge: Provides final summary and conclusion
 
 ## Configuration
 
 ### Evidence System (`config.py`)
 ```python
-ENABLE_EVIDENCE = True    # Enable/disable evidence retrieval
+ENABLE_EVIDENCE = False   # Evidence system disabled for AI text detection
 EVIDENCE_PHASE = "Free"   # Phase to present evidence ("Free", "Rebuttal", "Opening")
 FREE_ROUNDS = 1           # Number of free debate rounds
 ```
@@ -151,20 +150,18 @@ MEMORY_KEEP_RECENT = 10             # Recent conversations to keep after summari
 
 ## Important Implementation Details
 
-**Evidence Stance Classification**: The evidence system automatically classifies Wikipedia articles as supporting the news being true (SUPPORTS_TRUE) or false (SUPPORTS_FALSE). Each side only receives evidence favorable to their position, avoiding agent confusion from conflicting evidence.
-
 **Memory Management**: When shared conversation exceeds `MEMORY_SUMMARIZE_THRESHOLD` (default: 20 turns), the system automatically summarizes older context and keeps only the most recent `MEMORY_KEEP_RECENT` turns.
 
 **Fixed Stances**: Agents have fixed stances enforced through system prompts and stance reminders in user prompts. This prevents agents from abandoning their assigned position during debate.
 
 **Scoring Logic**: Each scoring judge assigns points that sum to exactly 7 between both sides. After all 5 judges, the maximum score is 35. The side with the higher total wins the verdict.
 
-**Domain Context**: The system detects the news domain and generates domain-specific profiles for each debate agent (but not judges), making arguments more relevant and informed.
+**Domain Context**: The system detects the text domain and generates domain-specific profiles for each debate agent (but not judges), making arguments more relevant and informed.
+
+**AI Text Detection Focus**: Unlike fake news detection, this framework analyzes text patterns, writing style, logical coherence, and depth to determine whether text is AI-generated or human-written. No external evidence retrieval is needed.
 
 ## Testing and Debugging
 
 **Viewing Debate Progress**: The Debate class prints each phase and speech to stdout as it happens.
 
-**Checking Evidence Results**: Evidence gathering prints keywords found and stance classifications.
-
-**Saved Results**: Check `Results/` directory for complete debate history including all evidence data and scoring breakdown.
+**Saved Results**: Check `Results/` directory for complete debate history including all scoring breakdown and analysis.
